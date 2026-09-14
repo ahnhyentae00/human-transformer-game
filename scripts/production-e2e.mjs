@@ -11,17 +11,44 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function waitForAnonymousAuth(page) {
-  await page.goto(baseUrl, { waitUntil: "domcontentloaded" });
-  await page.waitForFunction(
-    () => {
-      const button = [...document.querySelectorAll("button")].find((node) =>
-        node.textContent?.includes("세션 생성"),
-      );
-      return Boolean(button && !button.disabled);
-    },
-    { timeout: 20000 },
-  );
+async function waitForAnonymousAuth(page, label) {
+  const consoleErrors = [];
+  page.on("console", (message) => {
+    if (message.type() === "error") consoleErrors.push(message.text());
+  });
+  page.on("pageerror", (error) => consoleErrors.push(`pageerror: ${error.message}`));
+
+  const response = await page.goto(baseUrl, { waitUntil: "domcontentloaded" });
+  if (!response?.ok()) {
+    throw new Error(`${label}: home navigation failed with HTTP ${response?.status()}`);
+  }
+
+  try {
+    await page.waitForFunction(
+      () => {
+        const button = [...document.querySelectorAll("button")].find((node) =>
+          node.textContent?.includes("세션 생성"),
+        );
+        const authError = [...document.querySelectorAll(".error")].find((node) =>
+          node.textContent?.includes("익명 인증 실패"),
+        );
+        return Boolean((button && !button.disabled) || authError);
+      },
+      { timeout: 20000 },
+    );
+  } catch {
+    const bodyText = (await page.locator("body").innerText()).slice(0, 2500);
+    throw new Error(
+      `${label}: anonymous auth did not become ready. body=${JSON.stringify(bodyText)} console=${JSON.stringify(consoleErrors.slice(-10))}`,
+    );
+  }
+
+  const authError = await page.locator(".error").filter({ hasText: "익명 인증 실패" }).first();
+  if (await authError.count()) {
+    throw new Error(
+      `${label}: ${await authError.innerText()} console=${JSON.stringify(consoleErrors.slice(-10))}`,
+    );
+  }
 }
 
 async function api(page, path, { method = "GET", body } = {}) {
@@ -67,7 +94,7 @@ const playerPage = await playerContext.newPage();
 let roomCode = null;
 
 try {
-  await waitForAnonymousAuth(hostPage);
+  await waitForAnonymousAuth(hostPage, "host");
 
   const sessionResult = await api(hostPage, "/api/sessions", {
     method: "POST",
@@ -80,7 +107,7 @@ try {
   roomCode = sessionJson.session.room_code;
   assert(roomCode, "room code missing after session creation");
 
-  await waitForAnonymousAuth(playerPage);
+  await waitForAnonymousAuth(playerPage, "player");
 
   const joinJson = expectOk(
     await api(playerPage, `/api/rooms/${roomCode}/join`, {
