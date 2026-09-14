@@ -1,5 +1,9 @@
 const baseUrl = process.env.BASE_URL?.replace(/\/$/, "");
-if (!baseUrl) throw new Error("BASE_URL is required, e.g. BASE_URL=https://your-app.vercel.app npm run smoke:remote");
+if (!baseUrl) {
+  throw new Error(
+    "BASE_URL is required, e.g. BASE_URL=https://your-app.up.railway.app npm run smoke:remote",
+  );
+}
 
 async function mustFetch(path) {
   const response = await fetch(`${baseUrl}${path}`, { redirect: "follow" });
@@ -15,7 +19,7 @@ const healthJson = JSON.parse(health.text);
 if (healthJson.ok !== true || healthJson.supabaseConfigured !== true) {
   throw new Error(`/api/health is not ready: ${health.text}`);
 }
-if (healthJson.version !== "0.6.0") {
+if (healthJson.version !== "0.8.0") {
   throw new Error(`Unexpected deployed version: ${healthJson.version}`);
 }
 
@@ -27,4 +31,6 @@ if (!/noindex/i.test(home.text)) {
   throw new Error("robots noindex marker was not found in home HTML");
 }
 
-console.log(`REMOTE SMOKE PASS — ${baseUrl} health/home reachable, v${healthJson.version}, noindex present`);
+console.log(
+  `REMOTE SMOKE PASS — ${baseUrl} health/home reachable, v${healthJson.version}, noindex present`,
+);
