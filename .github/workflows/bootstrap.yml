@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - "bootstrap8/**"
+      - "archive/**"
       - ".github/workflows/bootstrap.yml"
   workflow_dispatch:
 
@@ -21,7 +21,7 @@ jobs:
         id: chunks
         shell: bash
         run: |
-          if [ -f bootstrap8/source.b64.16 ]; then
+          if [ -f archive/source.zip.b64.part07 ]; then
             echo "ready=true" >> "$GITHUB_OUTPUT"
           else
             echo "ready=false" >> "$GITHUB_OUTPUT"
@@ -31,11 +31,11 @@ jobs:
         if: steps.chunks.outputs.ready == 'true'
         shell: bash
         run: |
-          cat bootstrap8/source.b64.* | base64 -d > /tmp/source.zip
+          cat archive/source.zip.b64.part* | base64 -d > /tmp/source.zip
           mkdir -p /tmp/source
           unzip -q /tmp/source.zip -d /tmp/source
           rsync -a /tmp/source/human-transformer-game-v0.7/ ./
-          rm -rf bootstrap8 archive
+          rm -rf archive bootstrap8
           rm -f .github/workflows/bootstrap.yml
 
       - name: Commit extracted source
