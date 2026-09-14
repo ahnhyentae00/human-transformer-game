@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.8.1 — Railway healthcheck hardening
+
+- Railway liveness healthcheck와 Supabase readiness 검사를 분리
+  - `/api/health`: 앱 프로세스가 살아 있으면 항상 HTTP 200
+  - `/api/readiness`: Supabase public 환경변수가 준비된 경우에만 HTTP 200
+- standalone 서버를 `0.0.0.0`에 명시적으로 바인딩
+- remote smoke test가 liveness와 readiness를 각각 검증하도록 수정
+
+
 ## v0.8 — Railway deployment handoff
 
 - Railway self-hosting을 위한 `next.config.ts` 추가
