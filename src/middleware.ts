@@ -2,7 +2,16 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { getSupabasePublicEnv } from "@/lib/supabase/env";
 
+const HEALTH_PATHS = new Set(["/api/health", "/api/readiness"]);
+
 export async function middleware(request: NextRequest) {
+  // Railway deployment probes must stay independent from Supabase/Auth.
+  // Otherwise a slow or unavailable auth/JWKS request can make a healthy
+  // Next.js process fail its deployment healthcheck.
+  if (HEALTH_PATHS.has(request.nextUrl.pathname)) {
+    return NextResponse.next();
+  }
+
   let response = NextResponse.next({ request });
 
   let env: ReturnType<typeof getSupabasePublicEnv>;
