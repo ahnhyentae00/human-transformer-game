@@ -102,7 +102,7 @@ const browser = await chromium.launch({ headless: true });
 const hostContext = await browser.newContext();
 const playerContext = await browser.newContext();
 const hostPage = await hostContext.newPage();
-const playerPage = await playerContext.newPage();
+let playerPage = await playerContext.newPage();
 
 let roomCode = null;
 
@@ -139,6 +139,20 @@ try {
     "set ready",
   );
   assert(readyJson.membership?.is_ready === true, "player did not become ready");
+
+  // Verify classroom presence: both tabs must appear online, and a closed player tab
+  // must become OFFLINE after the client-side grace period.
+  await hostPage.goto(`${baseUrl}/host/${roomCode}`, { waitUntil: "domcontentloaded" });
+  await playerPage.goto(`${baseUrl}/play/${roomCode}`, { waitUntil: "domcontentloaded" });
+  await hostPage.getByText("__E2E_PLAYER__").waitFor({ timeout: 15000 });
+  await hostPage.getByText("ONLINE", { exact: true }).waitFor({ timeout: 15000 });
+
+  await playerPage.close();
+  await hostPage.getByText("OFFLINE", { exact: true }).waitFor({ timeout: 20000 });
+
+  playerPage = await playerContext.newPage();
+  await playerPage.goto(`${baseUrl}/play/${roomCode}`, { waitUntil: "domcontentloaded" });
+  await hostPage.getByText("ONLINE", { exact: true }).waitFor({ timeout: 15000 });
 
   let stateJson = expectOk(
     await api(hostPage, `/api/rooms/${roomCode}/state`),
@@ -180,8 +194,10 @@ try {
   );
   let game = startJson.game;
   assert(game.phase === "playing", `expected playing, got ${game.phase}`);
+  assert(game.timer_duration_ms === 12000, `expected 12000ms turn timer, got ${game.timer_duration_ms}`);
 
   await waitUntilIso(game.turn_started_at, 250);
+  await playerPage.getByText(/12초가 끝날 때/).waitFor({ timeout: 10000 });
 
   const invalidTurn = await api(playerPage, `/api/games/${gameId}/turns`, {
     method: "POST",
@@ -278,6 +294,9 @@ try {
   );
   game = revealJson.game;
   assert(game.result_revealed === true, "result was not revealed");
+  await hostPage.locator(".generated-response-segment").first().waitFor({ timeout: 10000 });
+  const visibleSegments = await hostPage.locator(".generated-response-segment").count();
+  assert(visibleSegments >= 2, `expected segmented final response, got ${visibleSegments} visual segments`);
 
   const completeJson = expectOk(
     await api(hostPage, `/api/games/${gameId}/complete`, { method: "POST" }),
@@ -313,9 +332,11 @@ try {
           "anonymous player auth",
           "join",
           "ready",
+          "presence online/offline/reconnect",
           "prompt creation",
           "game queue preparation",
           "start countdown",
+          "12-second turn timer UI",
           "3-character validation",
           "accepted turn",
           "pause/resume",
@@ -325,6 +346,7 @@ try {
           "ending notice/ack",
           "ending turn",
           "result reveal",
+          "segmented readable result",
           "complete",
         ],
       },
