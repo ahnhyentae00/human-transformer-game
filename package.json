@@ -1,0 +1,33 @@
+{
+  "name": "human-transformer-game",
+  "version": "0.7.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "qa": "node scripts/logic-qa.mjs && node scripts/scenario-qa.mjs",
+    "preflight": "node scripts/deploy-preflight.mjs",
+    "check:deploy": "npm run qa && npm run typecheck && npm run build",
+    "smoke:remote": "node scripts/remote-smoke.mjs",
+    "ci": "npm run preflight && npm run qa && npm run typecheck && npm run build"
+  },
+  "dependencies": {
+    "@supabase/ssr": "^0.7.0",
+    "@supabase/supabase-js": "^2.57.0",
+    "next": "15.5.24",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "zod": "^4.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "typescript": "^5.9.0"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}
