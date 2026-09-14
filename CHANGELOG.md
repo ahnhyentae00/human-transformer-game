@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.8 — Railway deployment handoff
+
+- Railway self-hosting을 위한 `next.config.ts` 추가
+  - `output: "standalone"`
+- production start script를 Next.js standalone server로 변경
+- `/api/health` 버전을 0.8.0으로 정합화
+- deploy preflight에 Railway standalone 설정 검증 추가
+- `RAILWAY_DEPLOYMENT.md` 추가
+- Vercel 종속 없이 GitHub → Railway → Supabase 구조로 배포 가능하도록 준비
+
 ## v0.7 — GitHub/CI handoff
 
 - GitHub Actions CI 추가 (`.github/workflows/ci.yml`)
@@ -9,7 +19,7 @@
 - package script `npm run ci` 추가
 - 배포 문서에 CI와 환경변수 분리 원칙 추가
 
-# v0.6 — 웹 배포 준비 및 2026-09 공식 문서 정합화
+## v0.6 — 웹 배포 준비 및 2026-09 공식 문서 정합화
 
 - Next.js를 15.5.24로 고정(2026-08 보안 릴리스 반영)
 - Supabase 환경변수를 Publishable key 명칭으로 전환
@@ -20,8 +30,6 @@
 - `/api/health` 배포 상태 점검 endpoint 추가
 - `npm run preflight`, `npm run check:deploy` 추가
 - `DEPLOYMENT.md` 추가
-
-# Changelog
 
 ## v0.5.0
 
