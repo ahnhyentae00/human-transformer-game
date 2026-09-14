@@ -249,14 +249,26 @@ try {
 
   await waitUntilIso(game.turn_deadline_at, 350);
 
-  const timeoutJson = expectOk(
-    await api(hostPage, `/api/games/${gameId}/timeout`, {
-      method: "POST",
-      body: { expectedVersion: game.version },
-    }),
-    "expire timed-out turn",
-  );
-  game = timeoutJson.game;
+  const timeoutResult = await api(hostPage, `/api/games/${gameId}/timeout`, {
+    method: "POST",
+    body: { expectedVersion: game.version },
+  });
+
+  if (timeoutResult.ok) {
+    game = timeoutResult.json.game;
+  } else if (timeoutResult.status === 409 && timeoutResult.text.includes("STALE_GAME_VERSION")) {
+    // A mounted HOST/PLAYER timer may have already expired the turn. That race is
+    // expected; fetch authoritative room state and verify the timeout was consumed.
+    const afterTimeoutState = expectOk(
+      await api(hostPage, `/api/rooms/${roomCode}/state`),
+      "state after automatic timeout",
+    );
+    game = afterTimeoutState.games.find((item) => item.id === gameId);
+    assert(game, "active game missing after automatic timeout");
+  } else {
+    expectOk(timeoutResult, "expire timed-out turn");
+  }
+
   assert(game.completed_turns === 2, "timeout did not consume one turn");
 
   const skipJson = expectOk(
