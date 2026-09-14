@@ -1,0 +1,49 @@
+name: bootstrap-source
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "archive/**"
+      - ".github/workflows/bootstrap.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  unpack:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Wait until all chunks exist
+        id: chunks
+        shell: bash
+        run: |
+          if [ -f archive/source.zip.b64.part07 ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Reconstruct project
+        if: steps.chunks.outputs.ready == 'true'
+        shell: bash
+        run: |
+          cat archive/source.zip.b64.part* | base64 -d > /tmp/source.zip
+          mkdir -p /tmp/source
+          unzip -q /tmp/source.zip -d /tmp/source
+          rsync -a /tmp/source/human-transformer-game-v0.7/ ./
+          rm -rf archive
+          rm -f .github/workflows/bootstrap.yml
+
+      - name: Commit extracted source
+        if: steps.chunks.outputs.ready == 'true'
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "release: import Human Transformer Game v0.7"
+          git push
