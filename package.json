@@ -1,11 +1,11 @@
 {
   "name": "human-transformer-game",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "node .next/standalone/server.js",
+    "start": "HOSTNAME=0.0.0.0 node .next/standalone/server.js",
     "typecheck": "tsc --noEmit",
     "qa": "node scripts/logic-qa.mjs && node scripts/scenario-qa.mjs",
     "preflight": "node scripts/deploy-preflight.mjs",
