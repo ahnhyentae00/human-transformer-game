@@ -1,4 +1,4 @@
-# 세 글자 생성 게임 — Human Transformer Game MVP v0.7
+# 세 글자 생성 게임 — Human Transformer Game MVP v0.8
 
 중학생 AI 멘토링에서 여러 명의 멘티가 **하나의 생성형 AI 역할을 공동 수행**하며 다음 흐름을 체험하는 웹게임입니다.
 
@@ -51,15 +51,15 @@
 
 ---
 
-## GitHub / CI 준비 상태 (v0.7)
+## GitHub / CI / Railway 준비 상태 (v0.8)
 
 - `.github/workflows/ci.yml` 포함
 - GitHub Actions에서 Node.js 24로 `preflight → qa → typecheck → build` 검증
 - 실제 Supabase 비밀키는 저장소에 커밋하지 않음
 - CI는 빌드 검증용 더미 Public URL/Publishable Key만 사용
-- 실제 배포 환경변수는 Vercel에 별도로 등록
+- 실제 배포 환경변수는 Railway 서비스 Variables에 별도로 등록
 
-저장소 생성과 업로드 절차는 `GITHUB_SETUP.md`, 실제 Vercel/Supabase 배포는 `DEPLOYMENT.md`를 참고합니다.
+저장소 생성과 업로드 절차는 `GITHUB_SETUP.md`, Railway 배포는 `RAILWAY_DEPLOYMENT.md`, 공통 배포 점검은 `DEPLOYMENT.md`를 참고합니다.
 
 ---
 
@@ -414,7 +414,7 @@ npm run qa
 
 `npm run qa`는 이 배포본에서 통과했습니다.
 
-현재 작업 환경에는 프로젝트 의존성이 설치되어 있지 않으므로 실제 Next.js 번들 빌드는 실행하지 않았습니다. 배포 전 로컬 환경에서 다음을 수행하세요.
+GitHub Actions에서 Node.js 24 기준 의존성 설치, preflight, QA, typecheck, Next.js production build까지 통과했습니다. 배포 전 변경사항이 있다면 다음을 다시 수행하세요.
 
 ```bash
 npm install
@@ -425,4 +425,4 @@ npm run build
 
 # 배포
 
-2026-09 기준 배포 절차와 보안 점검은 `DEPLOYMENT.md`를 참조합니다. 배포 전 `npm run preflight`, `npm run qa`, `npm run typecheck`, `npm run build`를 모두 통과해야 합니다.
+2026-09 기준 기본 배포 대상은 Railway입니다. `RAILWAY_DEPLOYMENT.md`와 `DEPLOYMENT.md`를 참조하고, 배포 전 `npm run preflight`, `npm run qa`, `npm run typecheck`, `npm run build`를 모두 통과해야 합니다.
