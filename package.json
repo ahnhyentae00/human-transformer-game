@@ -9,9 +9,10 @@
     "typecheck": "tsc --noEmit",
     "qa": "node scripts/logic-qa.mjs && node scripts/scenario-qa.mjs",
     "preflight": "node scripts/deploy-preflight.mjs",
-    "check:deploy": "npm run qa && npm run typecheck && npm run build",
+    "check:deploy": "npm run qa && npm run typecheck && npm run build && npm run verify:standalone",
     "smoke:remote": "node scripts/remote-smoke.mjs",
-    "ci": "npm run preflight && npm run qa && npm run typecheck && npm run build"
+    "ci": "npm run preflight && npm run qa && npm run typecheck && npm run build && npm run verify:standalone",
+    "verify:standalone": "node scripts/standalone-qa.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.7.0",
