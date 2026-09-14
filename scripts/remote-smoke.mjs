@@ -16,11 +16,17 @@ async function mustFetch(path) {
 
 const health = await mustFetch("/api/health");
 const healthJson = JSON.parse(health.text);
-if (healthJson.ok !== true || healthJson.supabaseConfigured !== true) {
-  throw new Error(`/api/health is not ready: ${health.text}`);
+if (healthJson.ok !== true) {
+  throw new Error(`/api/health is not live: ${health.text}`);
 }
-if (healthJson.version !== "0.8.0") {
+if (healthJson.version !== "0.8.1") {
   throw new Error(`Unexpected deployed version: ${healthJson.version}`);
+}
+
+const readiness = await mustFetch("/api/readiness");
+const readinessJson = JSON.parse(readiness.text);
+if (readinessJson.ready !== true || readinessJson.supabaseConfigured !== true) {
+  throw new Error(`/api/readiness is not ready: ${readiness.text}`);
 }
 
 const home = await mustFetch("/");
@@ -32,5 +38,5 @@ if (!/noindex/i.test(home.text)) {
 }
 
 console.log(
-  `REMOTE SMOKE PASS — ${baseUrl} health/home reachable, v${healthJson.version}, noindex present`,
+  `REMOTE SMOKE PASS — ${baseUrl} live and Supabase-ready, v${healthJson.version}, noindex present`,
 );
