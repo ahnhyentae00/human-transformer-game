@@ -58,3 +58,13 @@ jobs:
           fi
 
           node -e 'const fs=require("fs"); const j=JSON.parse(fs.readFileSync("/tmp/health.json","utf8")); if(j.ok!==true || j.version!=="0.8.1") process.exit(1)'
+
+          HOME_STATUS=$(curl -sS -o /tmp/home.html -w "%{http_code}" http://127.0.0.1:8080/ || true)
+          echo "--- / response status: $HOME_STATUS ---"
+          if [ "$HOME_STATUS" != "200" ]; then
+            head -c 1000 /tmp/home.html || true
+            echo
+            exit 1
+          fi
+
+          grep -q "세 글자 생성 게임\|Human Transformer" /tmp/home.html
