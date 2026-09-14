@@ -21,7 +21,7 @@ jobs:
         id: chunks
         shell: bash
         run: |
-          if [ -f archive/source.zip.b64.part15 ]; then
+          if [ -f archive/source.zip.b64.part09 ]; then
             echo "ready=true" >> "$GITHUB_OUTPUT"
           else
             echo "ready=false" >> "$GITHUB_OUTPUT"
