@@ -13,7 +13,7 @@ export async function GET() {
     {
       ok: true,
       app: "human-transformer-game",
-      version: "0.8.1",
+      version: "0.8.2",
       supabaseConfigured,
       timestamp: new Date().toISOString(),
     },
