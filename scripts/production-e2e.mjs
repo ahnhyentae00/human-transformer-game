@@ -13,10 +13,23 @@ function sleep(ms) {
 
 async function waitForAnonymousAuth(page, label) {
   const consoleErrors = [];
+  const failedResponses = [];
   page.on("console", (message) => {
     if (message.type() === "error") consoleErrors.push(message.text());
   });
   page.on("pageerror", (error) => consoleErrors.push(`pageerror: ${error.message}`));
+  page.on("response", async (response) => {
+    if (response.status() < 400) return;
+    const url = response.url();
+    if (!url.includes("supabase.co") && !url.includes("/auth/")) return;
+    let body = "";
+    try {
+      body = (await response.text()).slice(0, 1000);
+    } catch {
+      // Ignore body-read failures; URL/status are enough for diagnostics.
+    }
+    failedResponses.push({ status: response.status(), url, body });
+  });
 
   const response = await page.goto(baseUrl, { waitUntil: "domcontentloaded" });
   if (!response?.ok()) {
@@ -39,14 +52,14 @@ async function waitForAnonymousAuth(page, label) {
   } catch {
     const bodyText = (await page.locator("body").innerText()).slice(0, 2500);
     throw new Error(
-      `${label}: anonymous auth did not become ready. body=${JSON.stringify(bodyText)} console=${JSON.stringify(consoleErrors.slice(-10))}`,
+      `${label}: anonymous auth did not become ready. body=${JSON.stringify(bodyText)} console=${JSON.stringify(consoleErrors.slice(-10))} failedResponses=${JSON.stringify(failedResponses.slice(-10))}`,
     );
   }
 
   const authError = await page.locator(".error").filter({ hasText: "익명 인증 실패" }).first();
   if (await authError.count()) {
     throw new Error(
-      `${label}: ${await authError.innerText()} console=${JSON.stringify(consoleErrors.slice(-10))}`,
+      `${label}: ${await authError.innerText()} console=${JSON.stringify(consoleErrors.slice(-10))} failedResponses=${JSON.stringify(failedResponses.slice(-10))}`,
     );
   }
 }
