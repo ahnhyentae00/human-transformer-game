@@ -35,9 +35,8 @@ jobs:
           tar -tzf /tmp/source.tar.gz
           mkdir -p /tmp/source
           tar -xzf /tmp/source.tar.gz -C /tmp/source
-          rsync -a /tmp/source/human-transformer-game-v0.7/ ./
+          rsync -a --exclude='.github/' /tmp/source/human-transformer-game-v0.7/ ./
           rm -rf archive payload
-          rm -f .github/workflows/bootstrap.yml
 
       - name: Commit extracted source
         if: steps.chunks.outputs.ready == 'true'
