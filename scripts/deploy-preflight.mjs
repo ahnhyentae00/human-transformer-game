@@ -8,6 +8,8 @@ const mustExist = [
   "src/app/api/health/route.ts",
   "supabase/schema.sql",
   ".env.example",
+  "next.config.ts",
+  "RAILWAY_DEPLOYMENT.md",
 ];
 
 for (const path of mustExist) {
@@ -18,6 +20,14 @@ const pkg = JSON.parse(await readFile("package.json", "utf8"));
 if (pkg.dependencies?.next !== "15.5.24") {
   throw new Error(`Next.js must be pinned to 15.5.24 for this deployment candidate; found ${pkg.dependencies?.next}`);
 }
+if (pkg.scripts?.start !== "node .next/standalone/server.js") {
+  throw new Error("Railway start script must run the Next.js standalone server");
+}
+
+const nextConfig = await readFile("next.config.ts", "utf8");
+if (!nextConfig.includes('output: "standalone"')) {
+  throw new Error('next.config.ts must include output: "standalone" for Railway self-hosting');
+}
 
 const envExample = await readFile(".env.example", "utf8");
 if (!envExample.includes("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY")) {
@@ -27,4 +37,4 @@ if (envExample.includes("SERVICE_ROLE") || envExample.includes("SECRET_KEY")) {
   throw new Error("Server secret must not be documented as a browser environment variable");
 }
 
-console.log("DEPLOY PREFLIGHT PASS — secure Next.js patch pinned, deployment files present, publishable-key env documented");
+console.log("DEPLOY PREFLIGHT PASS — Next.js secure patch pinned, Railway standalone runtime configured, publishable-key env documented");
