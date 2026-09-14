@@ -3,7 +3,7 @@ import { constants } from "node:fs";
 
 const required = [
   ".next/standalone/server.js",
-  ".next/static",
+  ".next/standalone/.next/static",
 ];
 
 for (const path of required) {
@@ -15,9 +15,9 @@ if (!server.isFile() || server.size === 0) {
   throw new Error("Next.js standalone server was not generated correctly");
 }
 
-const staticDir = await stat(".next/static");
+const staticDir = await stat(".next/standalone/.next/static");
 if (!staticDir.isDirectory()) {
-  throw new Error("Next.js static output directory is missing");
+  throw new Error("Standalone runtime static directory is missing");
 }
 
-console.log("STANDALONE QA PASS — .next/standalone/server.js and .next/static are present");
+console.log("STANDALONE QA PASS — server.js and runtime static assets are present");
