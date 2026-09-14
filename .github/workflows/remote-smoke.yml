@@ -1,5 +1,5 @@
 name: railway-smoke
-# Uses the current main branch smoke script against Railway production.
+# Uses the current main branch smoke script against Railway production. Verified after v0.8.2 Railway success.
 
 on:
   push:
