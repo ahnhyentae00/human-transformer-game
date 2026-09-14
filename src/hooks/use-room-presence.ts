@@ -13,20 +13,31 @@ export function useRoomPresence(
 ) {
   const [onlineMembershipIds, setOnlineMembershipIds] = useState<Set<string>>(() => new Set());
   const [synced, setSynced] = useState(false);
-  const lastSeenRef = useRef<Map<string, number>>(new Map());
+
+  // Presence is authoritative while an id exists in presenceState().
+  // The grace timer starts only after an id actually disappears from that state.
+  const presentIdsRef = useRef<Set<string>>(new Set());
+  const leftAtRef = useRef<Map<string, number>>(new Map());
 
   const recompute = useCallback(() => {
-    const cutoff = Date.now() - PRESENCE_GRACE_MS;
-    const next = new Set<string>();
-    for (const [membershipId, lastSeenAt] of lastSeenRef.current.entries()) {
-      if (lastSeenAt >= cutoff) next.add(membershipId);
+    const now = Date.now();
+    const next = new Set<string>(presentIdsRef.current);
+
+    for (const [membershipId, leftAt] of leftAtRef.current.entries()) {
+      if (now - leftAt < PRESENCE_GRACE_MS) {
+        next.add(membershipId);
+      } else {
+        leftAtRef.current.delete(membershipId);
+      }
     }
+
     setOnlineMembershipIds(next);
   }, []);
 
   useEffect(() => {
     if (!enabled || !sessionId || !membership) {
-      lastSeenRef.current = new Map();
+      presentIdsRef.current = new Set();
+      leftAtRef.current = new Map();
       setOnlineMembershipIds(new Set());
       setSynced(false);
       return;
@@ -48,15 +59,29 @@ export function useRoomPresence(
     const syncPresence = () => {
       const now = Date.now();
       const state = channel.presenceState();
+      const currentIds = new Set<string>();
+
       for (const entries of Object.values(state)) {
         for (const entry of entries as Array<Record<string, unknown>>) {
           const membershipId = entry.membership_id;
-          if (typeof membershipId === "string") {
-            lastSeenRef.current.set(membershipId, now);
-          }
+          if (typeof membershipId === "string") currentIds.add(membershipId);
         }
       }
-      lastSeenRef.current.set(membership.id, now);
+
+      // The current tab is online even if the first sync arrives just before track().
+      currentIds.add(membership.id);
+
+      for (const membershipId of currentIds) {
+        leftAtRef.current.delete(membershipId);
+      }
+
+      for (const membershipId of presentIdsRef.current) {
+        if (!currentIds.has(membershipId) && !leftAtRef.current.has(membershipId)) {
+          leftAtRef.current.set(membershipId, now);
+        }
+      }
+
+      presentIdsRef.current = currentIds;
       setSynced(true);
       recompute();
     };
@@ -68,16 +93,18 @@ export function useRoomPresence(
         await channel.track({ ...payload, connected_at: new Date().toISOString() });
       });
 
-    const pruneTimer = window.setInterval(recompute, 1_000);
+    const graceTimer = window.setInterval(recompute, 1_000);
+
     const retrack = () => {
       if (document.visibilityState !== "visible" || !navigator.onLine) return;
       void channel.track({ ...payload, connected_at: new Date().toISOString() });
     };
+
     document.addEventListener("visibilitychange", retrack);
     window.addEventListener("online", retrack);
 
     return () => {
-      window.clearInterval(pruneTimer);
+      window.clearInterval(graceTimer);
       document.removeEventListener("visibilitychange", retrack);
       window.removeEventListener("online", retrack);
       void channel.untrack();
