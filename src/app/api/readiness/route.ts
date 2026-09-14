@@ -24,7 +24,7 @@ export async function GET() {
     {
       ready: supabaseConfigured,
       app: "human-transformer-game",
-      version: "0.8.2",
+      version: "0.8.3",
       supabaseConfigured,
       urlValid,
       timestamp: new Date().toISOString(),
