@@ -1,11 +1,12 @@
 name: railway-smoke
-# Uses the current main branch smoke script against Railway production. Verified after v0.8.2 Railway success.
+# Uses the current main branch smoke script against Railway production. Tracks the current production runtime version.
 
 on:
   push:
     branches: [main]
     paths:
       - ".github/workflows/remote-smoke.yml"
+      - "scripts/remote-smoke.mjs"
   workflow_dispatch:
 
 jobs:
