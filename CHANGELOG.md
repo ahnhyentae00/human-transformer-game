@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.8.3 — Railway standalone static asset fix
+
+- Next.js standalone runtime에 `.next/static`을 명시적으로 복사
+- `public/`이 존재할 경우 standalone runtime에 함께 복사
+- production browser E2E에서 발견된 `/_next/static/*` 404 문제 수정
+- standalone QA가 실제 runtime static 경로를 검증하도록 강화
+
+
 ## v0.8.1 — Railway healthcheck hardening
 
 - Railway liveness healthcheck와 Supabase readiness 검사를 분리
