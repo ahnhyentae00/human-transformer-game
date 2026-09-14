@@ -147,6 +147,10 @@ try {
   await hostPage.getByText("__E2E_PLAYER__").waitFor({ timeout: 15000 });
   await hostPage.getByText("ONLINE", { exact: true }).waitFor({ timeout: 15000 });
 
+  // Staying connected longer than PRESENCE_GRACE_MS must not turn a live player OFFLINE.
+  await sleep(11_500);
+  await hostPage.getByText("ONLINE", { exact: true }).waitFor({ timeout: 3000 });
+
   await playerPage.close();
   await hostPage.getByText("OFFLINE", { exact: true }).waitFor({ timeout: 20000 });
 
