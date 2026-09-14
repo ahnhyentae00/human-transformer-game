@@ -31,7 +31,8 @@ jobs:
         if: steps.chunks.outputs.ready == 'true'
         shell: bash
         run: |
-          cat archive/source.zip.b64.part* | base64 -d > /tmp/source.zip
+          cat archive/source.zip.b64.part* | base64 --decode --ignore-garbage > /tmp/source.zip
+          unzip -t /tmp/source.zip
           mkdir -p /tmp/source
           unzip -q /tmp/source.zip -d /tmp/source
           rsync -a /tmp/source/human-transformer-game-v0.7/ ./
