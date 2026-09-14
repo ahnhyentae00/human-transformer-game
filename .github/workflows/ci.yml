@@ -28,3 +28,33 @@ jobs:
 
       - name: Verify deployment candidate
         run: npm run ci
+
+      - name: Verify standalone HTTP runtime
+        shell: bash
+        run: |
+          HOSTNAME=0.0.0.0 PORT=8080 node .next/standalone/server.js > /tmp/htg-server.log 2>&1 &
+          APP_PID=$!
+          trap 'kill "$APP_PID" 2>/dev/null || true' EXIT
+
+          READY=0
+          for i in {1..20}; do
+            STATUS=$(curl -sS -o /tmp/health.json -w "%{http_code}" http://127.0.0.1:8080/api/health || true)
+            if [ "$STATUS" = "200" ]; then
+              READY=1
+              break
+            fi
+            sleep 0.5
+          done
+
+          echo "--- standalone server log ---"
+          cat /tmp/htg-server.log || true
+          echo "--- /api/health response ---"
+          cat /tmp/health.json || true
+          echo
+
+          if [ "$READY" != "1" ]; then
+            echo "Standalone runtime did not return HTTP 200 from /api/health"
+            exit 1
+          fi
+
+          node -e 'const fs=require("fs"); const j=JSON.parse(fs.readFileSync("/tmp/health.json","utf8")); if(j.ok!==true || j.version!=="0.8.1") process.exit(1)'
