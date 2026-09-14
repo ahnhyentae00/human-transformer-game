@@ -11,35 +11,29 @@ export async function middleware(request: NextRequest) {
 
   let response = NextResponse.next({ request });
 
-  let env: ReturnType<typeof getSupabasePublicEnv>;
   try {
-    env = getSupabasePublicEnv();
-  } catch {
-    return response;
-  }
+    const env = getSupabasePublicEnv();
 
-  const supabase = createServerClient(env.url, env.key, {
-    cookies: {
-      getAll() {
-        return request.cookies.getAll();
+    const supabase = createServerClient(env.url, env.key, {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll();
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
+          response = NextResponse.next({ request });
+          cookiesToSet.forEach(({ name, value, options }) =>
+            response.cookies.set(name, value, options),
+          );
+        },
       },
-      setAll(cookiesToSet) {
-        cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
-        response = NextResponse.next({ request });
-        cookiesToSet.forEach(({ name, value, options }) =>
-          response.cookies.set(name, value, options),
-        );
-      },
-    },
-  });
+    });
 
-  // Auth refresh must never take the whole application down.
-  // The client-side anonymous-auth flow will surface an auth error if Supabase
-  // is unavailable or misconfigured, while public pages remain renderable.
-  try {
     await supabase.auth.getClaims();
   } catch (error) {
-    console.error("Supabase middleware auth refresh failed", error);
+    // Public pages must remain renderable even when Supabase configuration
+    // is malformed or the auth service is temporarily unavailable.
+    console.error("Supabase middleware initialization/auth refresh failed", error);
   }
 
   return response;
