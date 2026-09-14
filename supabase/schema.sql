@@ -86,7 +86,7 @@ create table public.game_runs (
   generated_text text not null,
   ending_lap_snapshot integer not null check (ending_lap_snapshot >= 1),
   player_count_snapshot integer not null check (player_count_snapshot >= 1),
-  timer_duration_ms integer not null default 7000 check (timer_duration_ms >= 1000),
+  timer_duration_ms integer not null default 12000 check (timer_duration_ms >= 1000),
   start_countdown_ms integer not null default 3000 check (start_countdown_ms >= 0 and start_countdown_ms <= 10000),
 
   completed_turns integer not null default 0 check (completed_turns >= 0),
@@ -652,7 +652,7 @@ begin
     p.seed_text,
     p.ending_lap,
     t.expected_player_count,
-    7000,
+    12000,
     3000
   from public.teams t
   cross join public.prompt_cards p
@@ -1449,6 +1449,38 @@ alter publication supabase_realtime add table public.turns;
 alter publication supabase_realtime add table public.session_memberships;
 
 
+create or replace function public.host_remove_player(p_membership_id uuid)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $
+declare
+  target public.session_memberships;
+begin
+  select * into target
+  from public.session_memberships
+  where id = p_membership_id
+    and role = 'player'
+  for update;
+
+  if target.id is null then raise exception 'PLAYER_MEMBERSHIP_NOT_FOUND'; end if;
+  if not public.is_session_host(target.session_id) then raise exception 'HOST_ONLY'; end if;
+
+  if exists (
+    select 1
+    from public.game_runs g
+    where g.session_id = target.session_id
+      and g.phase not in ('queued', 'ready')
+  ) then
+    raise exception 'SESSION_ALREADY_STARTED';
+  end if;
+
+  delete from public.session_memberships where id = target.id;
+  return true;
+end;
+$;
+
 -- Anonymous Auth 사용자는 Postgres role상 authenticated로 동작한다.
 revoke all on function public.create_game_session(text, integer[]) from public;
 revoke all on function public.join_game_session(text, text) from public;
@@ -1469,6 +1501,7 @@ revoke all on function public.restart_current_turn(uuid, bigint) from public;
 revoke all on function public.skip_current_turn(uuid, bigint) from public;
 revoke all on function public.reveal_game_result(uuid) from public;
 revoke all on function public.complete_game(uuid) from public;
+revoke all on function public.host_remove_player(uuid) from public;
 
 grant execute on function public.create_game_session(text, integer[]) to authenticated;
 grant execute on function public.join_game_session(text, text) to authenticated;
@@ -1489,3 +1522,26 @@ grant execute on function public.restart_current_turn(uuid, bigint) to authentic
 grant execute on function public.skip_current_turn(uuid, bigint) to authenticated;
 grant execute on function public.reveal_game_result(uuid) to authenticated;
 grant execute on function public.complete_game(uuid) to authenticated;
+grant execute on function public.host_remove_player(uuid) to authenticated;
+
+-- Explicitly remove SECURITY DEFINER execution from the unauthenticated anon role.
+do $
+declare
+  r record;
+begin
+  for r in
+    select n.nspname as schema_name,
+           p.proname as function_name,
+           pg_get_function_identity_arguments(p.oid) as identity_args
+    from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public'
+      and p.prosecdef
+  loop
+    execute format('revoke all privileges on function %I.%I(%s) from anon', r.schema_name, r.function_name, r.identity_args);
+    execute format('revoke all privileges on function %I.%I(%s) from PUBLIC', r.schema_name, r.function_name, r.identity_args);
+    execute format('grant execute on function %I.%I(%s) to authenticated', r.schema_name, r.function_name, r.identity_args);
+  end loop;
+end
+$;
+

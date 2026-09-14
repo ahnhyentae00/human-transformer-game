@@ -6,11 +6,13 @@ import { useParams } from "next/navigation";
 import { GameStage } from "@/components/game-stage";
 import { useAnonymousAuth } from "@/hooks/use-anonymous-auth";
 import { useRoomState } from "@/hooks/use-room-state";
+import { useRoomPresence } from "@/hooks/use-room-presence";
 import { useTurnTimer } from "@/hooks/use-turn-timer";
 import { useTurnStart } from "@/hooks/use-turn-start";
 import { deleteJson, patchJson, postJson } from "@/lib/api/client";
 import { friendlyError } from "@/lib/api/errors";
 import { countEffectiveCharacters } from "@/lib/text/three-char";
+import { activePlayerMembership } from "@/lib/game/state-machine";
 import type { GameRun } from "@/types/game";
 
 export default function HostRoomPage() {
@@ -18,6 +20,7 @@ export default function HostRoomPage() {
   const roomCode = params.roomCode;
   const { ready: authReady, error: authError } = useAnonymousAuth();
   const { state, loading, error, refresh } = useRoomState(roomCode, authReady);
+  const presence = useRoomPresence(state?.session.id ?? null, state?.currentMembership ?? null, authReady && Boolean(state));
   const [actionError, setActionError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [promptTitle, setPromptTitle] = useState("");
@@ -38,6 +41,12 @@ export default function HostRoomPage() {
     return state.games.find((g) => g.id === state.session.active_game_run_id) ?? null;
   }, [state]);
 
+  const activePlayer = useMemo(
+    () => activeGame && state ? activePlayerMembership(activeGame, state.memberships) : undefined,
+    [activeGame, state],
+  );
+  const activePlayerOnline = activePlayer && presence.synced ? presence.isOnline(activePlayer.id) : null;
+
   const onTimeout = useCallback(async () => {
     if (!activeGame || activeGame.is_paused || !(activeGame.phase === "playing" || activeGame.phase === "ending")) return;
     try {
@@ -52,7 +61,7 @@ export default function HostRoomPage() {
 
   const progress = useTurnTimer(
     activeGame?.turn_deadline_at ?? null,
-    activeGame?.timer_duration_ms ?? 7000,
+    activeGame?.timer_duration_ms ?? 12000,
     activeGame?.version ?? -1,
     onTimeout,
   );
@@ -210,9 +219,10 @@ export default function HostRoomPage() {
     })
     .filter((game) => {
       if (!["queued", "ready"].includes(game.phase)) return false;
-      const readyCount = state.memberships.filter((m) => m.role === "player" && m.team_id === game.team_id && m.is_ready).length;
+      const players = state.memberships.filter((m) => m.role === "player" && m.team_id === game.team_id);
+      const onlineReadyCount = presence.synced ? players.filter((m) => m.is_ready && presence.isOnline(m.id)).length : 0;
       const previousComplete = !state.games.some((g) => g.team_id === game.team_id && g.play_order < game.play_order && g.phase !== "complete");
-      return readyCount === game.player_count_snapshot && previousComplete;
+      return presence.synced && onlineReadyCount === game.player_count_snapshot && previousComplete;
     });
 
   if (presentationMode) {
@@ -243,6 +253,8 @@ export default function HostRoomPage() {
               turnStarted={turnStart.started}
               startCountdownLabel={turnStart.countdownLabel}
               presentation
+              turns={state.turns.filter((turn) => turn.game_run_id === activeGame.id)}
+              activePlayerOnline={activePlayerOnline}
             />
           ) : (
             <div className="presentation-lobby center">
@@ -251,11 +263,13 @@ export default function HostRoomPage() {
               <p className="muted">생성자들은 방 코드 <strong className="room-code">{roomCode}</strong>로 참가합니다.</p>
               <div className="presentation-ready-grid">
                 {state.teams.map((team) => {
-                  const readyCount = state.memberships.filter((m) => m.role === "player" && m.team_id === team.id && m.is_ready).length;
+                  const players = state.memberships.filter((m) => m.role === "player" && m.team_id === team.id);
+                  const readyCount = players.filter((m) => m.is_ready).length;
+                  const onlineCount = presence.synced ? players.filter((m) => presence.isOnline(m.id)).length : 0;
                   return (
                     <div className="presentation-ready-card" key={team.id}>
                       <strong>{team.name}</strong>
-                      <span>{readyCount} / {team.expected_player_count} READY</span>
+                      <span>{readyCount} / {team.expected_player_count} READY · {presence.synced ? `${onlineCount} / ${team.expected_player_count} ONLINE` : "연결 확인 중"}</span>
                     </div>
                   );
                 })}
@@ -351,6 +365,8 @@ export default function HostRoomPage() {
               timerProgress={progress}
               turnStarted={turnStart.started}
               startCountdownLabel={turnStart.countdownLabel}
+              turns={state.turns.filter((turn) => turn.game_run_id === activeGame.id)}
+              activePlayerOnline={activePlayerOnline}
             />
 
             <div className="card">
@@ -379,7 +395,7 @@ export default function HostRoomPage() {
                     className="btn btn-ghost"
                     disabled={busy !== null}
                     onClick={() => runAction("restart-turn", () => postJson(`/api/games/${activeGame.id}/restart-turn`, { expectedVersion: activeGame.version }))}
-                  >현재 턴 7초 다시 시작</button>
+                  >{`현재 턴 ${Math.round(activeGame.timer_duration_ms / 1000)}초 다시 시작`}</button>
                 )}
                 {["playing", "ending"].includes(activeGame.phase) && (
                   <button
@@ -478,14 +494,16 @@ export default function HostRoomPage() {
                   .filter((m) => m.role === "player" && m.team_id === team.id)
                   .sort((a, b) => (a.player_order ?? 0) - (b.player_order ?? 0));
                 const readyCount = players.filter((p) => p.is_ready).length;
+                const onlineCount = presence.synced ? players.filter((p) => presence.isOnline(p.id)).length : 0;
+                const offlineCount = Math.max(0, players.length - onlineCount);
                 return (
                   <div className="team-roster" key={team.id}>
                     <div className="team-roster-head">
                       <div>
                         <div className="list-title">{team.name}</div>
-                        <div className="list-sub">{players.length}/{team.expected_player_count}명 · 준비 {readyCount}/{team.expected_player_count}</div>
+                        <div className="list-sub">{players.length}/{team.expected_player_count}명 · 준비 {readyCount}/{team.expected_player_count} · 접속 {presence.synced ? `${onlineCount}/${team.expected_player_count}` : "확인 중"}</div>
                       </div>
-                      <span className={`pill ${readyCount === team.expected_player_count ? "ok" : ""}`}>{readyCount === team.expected_player_count ? "READY" : "WAIT"}</span>
+                      <span className={`pill ${presence.synced && offlineCount > 0 ? "warn" : readyCount === team.expected_player_count && onlineCount === team.expected_player_count ? "ok" : ""}`}>{!presence.synced ? "SYNC" : offlineCount > 0 ? `OFFLINE ${offlineCount}` : readyCount === team.expected_player_count ? "READY" : "WAIT"}</span>
                     </div>
                     <div className="roster-slots">
                       {Array.from({ length: team.expected_player_count }, (_, slotIndex) => {
@@ -500,7 +518,9 @@ export default function HostRoomPage() {
                               <span className="slot-number">{order}</span>
                               <strong>{player.display_name}</strong>
                               <span className={`status-dot ${player.is_ready ? "ready" : ""}`} title={player.is_ready ? "준비 완료" : "대기"} />
+                              <span className={`presence-badge ${presence.synced && presence.isOnline(player.id) ? "online" : "offline"}`}>{presence.synced ? (presence.isOnline(player.id) ? "ONLINE" : "OFFLINE") : "SYNC"}</span>
                             </div>
+                            <div className="roster-actions">
                             <select
                               className="select roster-select"
                               value={`${team.id}:${order}`}
@@ -522,6 +542,17 @@ export default function HostRoomPage() {
                                 }),
                               )}
                             </select>
+                            {!anyStarted && presence.synced && !presence.isOnline(player.id) && (
+                              <button
+                                className="btn btn-danger btn-small"
+                                disabled={busy !== null}
+                                onClick={() => {
+                                  if (!window.confirm(`${player.display_name}의 참가 기록을 제거하고 자리를 비울까요?`)) return;
+                                  void runAction(`remove-${player.id}`, () => deleteJson(`/api/memberships/${player.id}`));
+                                }}
+                              >자리 비우기</button>
+                            )}
+                            </div>
                           </div>
                         );
                       })}
@@ -642,14 +673,16 @@ export default function HostRoomPage() {
                 })
                 .map((game: GameRun) => {
                   const team = state.teams.find((t) => t.id === game.team_id);
-                  const readyCount = state.memberships.filter((m) => m.role === "player" && m.team_id === game.team_id && m.is_ready).length;
+                  const players = state.memberships.filter((m) => m.role === "player" && m.team_id === game.team_id);
+                  const readyCount = players.filter((m) => m.is_ready).length;
+                  const onlineReadyCount = presence.synced ? players.filter((m) => m.is_ready && presence.isOnline(m.id)).length : 0;
                   const previousComplete = !state.games.some((g) => g.team_id === game.team_id && g.play_order < game.play_order && g.phase !== "complete");
-                  const canStart = !activeGame && ["queued", "ready"].includes(game.phase) && readyCount === game.player_count_snapshot && previousComplete;
+                  const canStart = !activeGame && presence.synced && ["queued", "ready"].includes(game.phase) && onlineReadyCount === game.player_count_snapshot && previousComplete;
                   return (
                     <div className="list-item" key={game.id}>
                       <div className="list-main">
                         <div className="list-title">{team?.name} · GAME {game.play_order}</div>
-                        <div className="list-sub">{game.prompt_text_snapshot}<br />상태: {game.phase} · 준비 {readyCount}/{game.player_count_snapshot}</div>
+                        <div className="list-sub">{game.prompt_text_snapshot}<br />상태: {game.phase} · 준비 {readyCount}/{game.player_count_snapshot} · 접속+READY {presence.synced ? `${onlineReadyCount}/${game.player_count_snapshot}` : "확인 중"}</div>
                       </div>
                       {["queued", "ready"].includes(game.phase) ? (
                         <button

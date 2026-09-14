@@ -397,3 +397,66 @@ td { font-size: 14px; }
   padding: 24px 28px;
   font-size: clamp(18px, 2vw, 28px);
 }
+
+
+/* v0.9 playtest usability */
+.generated-response-segments {
+  white-space: normal;
+}
+
+.generated-response-segment {
+  display: inline-block;
+  margin-inline-end: 0.36em;
+  white-space: pre-wrap;
+}
+
+.generated-response-segment:last-child {
+  margin-inline-end: 0;
+}
+
+.result-source-note {
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.connection-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 12px 14px;
+  border: 1px solid rgba(245, 158, 11, 0.42);
+  border-radius: 14px;
+  background: rgba(245, 158, 11, 0.08);
+}
+
+.presence-badge {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  border-radius: 999px;
+  padding: 3px 7px;
+  border: 1px solid var(--border);
+}
+
+.presence-badge.online {
+  color: var(--ok);
+}
+
+.presence-badge.offline {
+  color: var(--danger);
+}
+
+.roster-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.btn-small {
+  padding: 8px 10px;
+  font-size: 12px;
+}

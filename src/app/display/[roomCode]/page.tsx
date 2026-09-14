@@ -36,7 +36,7 @@ export default function DisplayRoomPage() {
 
   const progress = useTurnTimer(
     activeGame?.turn_deadline_at ?? null,
-    activeGame?.timer_duration_ms ?? 7000,
+    activeGame?.timer_duration_ms ?? 12000,
     activeGame?.version ?? -1,
     onTimeout,
   );
@@ -52,7 +52,7 @@ export default function DisplayRoomPage() {
           <span className="pill">ROOM <span className="room-code">{roomCode}</span></span>
         </header>
         {activeGame ? (
-          <GameStage game={activeGame} memberships={state.memberships} teams={state.teams} timerProgress={progress} turnStarted={turnStart.started} startCountdownLabel={turnStart.countdownLabel} />
+          <GameStage game={activeGame} memberships={state.memberships} teams={state.teams} timerProgress={progress} turnStarted={turnStart.started} startCountdownLabel={turnStart.countdownLabel} turns={state.turns.filter((turn) => turn.game_run_id === activeGame.id)} />
         ) : (
           <div className="card center"><div className="big-status">게임 대기 중</div><p className="muted">멘토가 게임을 시작하면 자동으로 표시됩니다.</p></div>
         )}

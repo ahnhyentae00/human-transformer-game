@@ -1,8 +1,9 @@
 "use client";
 
-import type { GameRun } from "@/types/game";
+import { GeneratedResponse } from "./generated-response";
+import type { GameRun, TurnRow } from "@/types/game";
 
-export function ResultReveal({ game }: { game: GameRun }) {
+export function ResultReveal({ game, turns }: { game: GameRun; turns: TurnRow[] }) {
   if (!game.result_revealed) {
     return (
       <div className="result-wait card center">
@@ -28,7 +29,8 @@ export function ResultReveal({ game }: { game: GameRun }) {
         <div className="result-arrow" aria-hidden="true">→</div>
         <div className="result-panel response-result-panel">
           <div className="eyebrow">GENERATED RESPONSE</div>
-          <div className="result-main-text">{game.generated_text}</div>
+          <div className="result-main-text"><GeneratedResponse seedText={game.seed_text_snapshot} generatedText={game.generated_text} turns={turns} /></div>
+          <div className="result-source-note">간격은 세 글자 생성 턴의 경계를 보여주기 위한 시각적 구분입니다. 저장된 원문은 그대로 유지됩니다.</div>
         </div>
       </div>
       <div className="reflection-row">

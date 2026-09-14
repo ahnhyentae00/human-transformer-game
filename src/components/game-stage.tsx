@@ -1,7 +1,7 @@
 "use client";
 
 import { activeLap, activePlayerMembership, activePlayerOrder, isTurnActive } from "@/lib/game/state-machine";
-import type { GameRun, MembershipRow, TeamRow } from "@/types/game";
+import type { GameRun, MembershipRow, TeamRow, TurnRow } from "@/types/game";
 import { ResultReveal } from "./result-reveal";
 import { StartCountdown } from "./start-countdown";
 import { TimerBar } from "./timer-bar";
@@ -15,6 +15,8 @@ export function GameStage({
   startCountdownLabel = null,
   compact = false,
   presentation = false,
+  turns = [],
+  activePlayerOnline = null,
 }: {
   game: GameRun;
   memberships: MembershipRow[];
@@ -24,6 +26,8 @@ export function GameStage({
   startCountdownLabel?: string | null;
   compact?: boolean;
   presentation?: boolean;
+  turns?: TurnRow[];
+  activePlayerOnline?: boolean | null;
 }) {
   const team = teams.find((t) => t.id === game.team_id);
   const player = activePlayerMembership(game, memberships);
@@ -32,13 +36,21 @@ export function GameStage({
   const turnCountdown = isTurnActive(game.phase) && !game.is_paused && !turnStarted;
 
   if (game.phase === "result") {
-    return <ResultReveal game={game} />;
+    return <ResultReveal game={game} turns={turns} />;
   }
 
   return (
     <section className={`grid game-stage ${presentation ? "game-stage-presentation" : ""}`} style={{ gap: compact ? 12 : 18 }}>
       {isTurnActive(game.phase) && turnStarted && !game.is_paused && (
         <TimerBar progress={timerProgress} ending={game.phase === "ending"} />
+      )}
+
+      {activePlayerOnline === false && isTurnActive(game.phase) && (
+        <div className="connection-banner" role="status">
+          <span className="pill warn">OFFLINE</span>
+          <strong>{player?.display_name ?? `${playerOrder}번 생성자`}의 연결이 끊겼습니다.</strong>
+          <span>복귀하지 않으면 멘토가 현재 턴을 건너뛸 수 있습니다.</span>
+        </div>
       )}
 
       {game.is_paused && (
@@ -87,7 +99,7 @@ export function GameStage({
         </div>
         {isTurnActive(game.phase) && (
           <div className="current-player">
-            {game.is_paused ? "일시정지" : turnCountdown ? "생성 준비 중" : `${player?.display_name ?? `${playerOrder}번 생성자`}의 생성 대기 중`}
+            {game.is_paused ? "일시정지" : turnCountdown ? "생성 준비 중" : `${player?.display_name ?? `${playerOrder}번 생성자`}의 생성 대기 중${activePlayerOnline === false ? " · OFFLINE" : ""}`}
           </div>
         )}
       </div>

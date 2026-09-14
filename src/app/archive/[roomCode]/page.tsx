@@ -5,6 +5,7 @@ import { useMemo } from "react";
 import { useParams } from "next/navigation";
 import { useAnonymousAuth } from "@/hooks/use-anonymous-auth";
 import { useRoomState } from "@/hooks/use-room-state";
+import { GeneratedResponse } from "@/components/generated-response";
 
 export default function ArchivePage() {
   const params = useParams<{ roomCode: string }>();
@@ -60,7 +61,7 @@ export default function ArchivePage() {
                       <div className="list-item" key={game.id} style={{ alignItems: "flex-start" }}>
                         <div className="list-main">
                           <div className="list-title">{team?.name}</div>
-                          <div className="list-sub" style={{ fontSize: 14, color: "var(--text)", marginTop: 8 }}>{game.generated_text}</div>
+                          <div className="list-sub" style={{ fontSize: 14, color: "var(--text)", marginTop: 8 }}><GeneratedResponse seedText={game.seed_text_snapshot} generatedText={game.generated_text} turns={state.turns.filter((turn) => turn.game_run_id === game.id)} /></div>
                         </div>
                       </div>
                     );
@@ -91,7 +92,8 @@ export default function ArchivePage() {
               <div className="label">SEED</div>
               <p>{game.seed_text_snapshot}</p>
               <div className="label">FINAL RESPONSE</div>
-              <p style={{ fontSize: 22, lineHeight: 1.65, fontWeight: 800 }}>{game.generated_text}</p>
+              <div style={{ fontSize: 22, lineHeight: 1.65, fontWeight: 800 }}><GeneratedResponse seedText={game.seed_text_snapshot} generatedText={game.generated_text} turns={turns} /></div>
+              <p className="result-source-note">표시 간격은 턴 경계이며 원문 데이터에는 추가되지 않습니다.</p>
 
               <div className="table-wrap">
                 <table>

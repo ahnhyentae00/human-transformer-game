@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.9 — Playtest usability
+
+- 기본 생성 제한시간을 7초에서 12초로 확대
+- PLAYER/멘토 안내 문구가 실제 제한시간을 동적으로 표시
+- 결과/아카이브에서 Seed와 각 세 글자 턴을 시각적으로 구분하되 원본 문자열은 보존
+- Supabase Realtime Presence로 참가자의 ONLINE/OFFLINE 상태 반영
+- OFFLINE 플레이어가 있으면 새 게임 시작을 막고 멘토 화면에 연결 상태 표시
+- 게임 시작 전 OFFLINE 플레이어의 자리를 멘토가 비울 수 있는 RPC/API 추가
+
+
 ## v0.8.3 — Railway standalone static asset fix
 
 - Next.js standalone runtime에 `.next/static`을 명시적으로 복사

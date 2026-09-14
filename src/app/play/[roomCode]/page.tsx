@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import { GameStage } from "@/components/game-stage";
 import { useAnonymousAuth } from "@/hooks/use-anonymous-auth";
 import { useRoomState } from "@/hooks/use-room-state";
+import { useRoomPresence } from "@/hooks/use-room-presence";
 import { useTurnTimer } from "@/hooks/use-turn-timer";
 import { useTurnStart } from "@/hooks/use-turn-start";
 import { postJson } from "@/lib/api/client";
@@ -18,6 +19,7 @@ export default function PlayerRoomPage() {
   const roomCode = params.roomCode;
   const { ready: authReady, error: authError } = useAnonymousAuth();
   const { state, loading, error, refresh } = useRoomState(roomCode, authReady);
+  useRoomPresence(state?.session.id ?? null, state?.currentMembership ?? null, authReady && Boolean(state));
   const [text, setText] = useState("");
   const [isComposing, setIsComposing] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -67,7 +69,7 @@ export default function PlayerRoomPage() {
 
   const progress = useTurnTimer(
     activeGame?.turn_deadline_at ?? null,
-    activeGame?.timer_duration_ms ?? 7000,
+    activeGame?.timer_duration_ms ?? 12000,
     activeGame?.version ?? -1,
     onTimeout,
   );
@@ -184,6 +186,7 @@ export default function PlayerRoomPage() {
               turnStarted={turnStart.started}
               startCountdownLabel={turnStart.countdownLabel}
               compact
+              turns={state.turns.filter((turn) => turn.game_run_id === activeGame.id)}
             />
 
             {activeGame.phase === "ending_notice" && (
@@ -227,7 +230,7 @@ export default function PlayerRoomPage() {
                 <button className="btn btn-primary" style={{ width: "100%", marginTop: 12 }} disabled={!valid || busy}>
                   생성 확정 <span className="kbd">Enter</span>
                 </button>
-                <p className="help center">공백과 문장부호는 글자 수에서 제외됩니다. 7초가 끝날 때 정확히 세 글자가 아니면 TIME OUT입니다.</p>
+                <p className="help center">공백과 문장부호는 글자 수에서 제외됩니다. {Math.round(activeGame.timer_duration_ms / 1000)}초가 끝날 때 정확히 세 글자가 아니면 TIME OUT입니다.</p>
               </form>
             )}
 
