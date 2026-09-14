@@ -19,7 +19,7 @@ const healthJson = JSON.parse(health.text);
 if (healthJson.ok !== true) {
   throw new Error(`/api/health is not live: ${health.text}`);
 }
-if (healthJson.version !== "0.8.1") {
+if (healthJson.version !== "0.8.2") {
   throw new Error(`Unexpected deployed version: ${healthJson.version}`);
 }
 
