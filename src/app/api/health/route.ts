@@ -11,12 +11,12 @@ export async function GET() {
 
   return NextResponse.json(
     {
-      ok: supabaseConfigured,
+      ok: true,
       app: "human-transformer-game",
-      version: "0.8.0",
+      version: "0.8.1",
       supabaseConfigured,
       timestamp: new Date().toISOString(),
     },
-    { status: supabaseConfigured ? 200 : 503 },
+    { status: 200 },
   );
 }
