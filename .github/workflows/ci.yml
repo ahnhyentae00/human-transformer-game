@@ -57,7 +57,7 @@ jobs:
             exit 1
           fi
 
-          node -e 'const fs=require("fs"); const j=JSON.parse(fs.readFileSync("/tmp/health.json","utf8")); if(j.ok!==true || j.version!=="0.8.2") process.exit(1)'
+          node -e 'const fs=require("fs"); const j=JSON.parse(fs.readFileSync("/tmp/health.json","utf8")); if(j.ok!==true || j.version!=="0.8.3") process.exit(1)'
 
           HOME_STATUS=$(curl -sS -o /tmp/home.html -w "%{http_code}" http://127.0.0.1:8080/ || true)
           echo "--- / response status: $HOME_STATUS ---"
