@@ -6,6 +6,7 @@ const mustExist = [
   "src/app/host/[roomCode]/page.tsx",
   "src/app/play/[roomCode]/page.tsx",
   "src/app/api/health/route.ts",
+  "src/app/api/readiness/route.ts",
   "supabase/schema.sql",
   ".env.example",
   "next.config.ts",
@@ -20,8 +21,8 @@ const pkg = JSON.parse(await readFile("package.json", "utf8"));
 if (pkg.dependencies?.next !== "15.5.24") {
   throw new Error(`Next.js must be pinned to 15.5.24 for this deployment candidate; found ${pkg.dependencies?.next}`);
 }
-if (pkg.scripts?.start !== "node .next/standalone/server.js") {
-  throw new Error("Railway start script must run the Next.js standalone server");
+if (pkg.scripts?.start !== "HOSTNAME=0.0.0.0 node .next/standalone/server.js") {
+  throw new Error("Railway start script must bind the Next.js standalone server to 0.0.0.0");
 }
 
 const nextConfig = await readFile("next.config.ts", "utf8");
